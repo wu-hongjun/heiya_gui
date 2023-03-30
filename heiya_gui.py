@@ -5,9 +5,9 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QCheckBox, Q
 import heiya.to_hei
 
 author = "Hongjun Wu"
-version = "1.0.0"
+version = "1.1.0"
 updated_date = "20230330"
-highlight = "First implementation of Heiya GUI"
+highlight = "Added a button to clear the list."
 
 class ExtensionWindow(QDialog):
     def __init__(self):
@@ -154,18 +154,25 @@ class MainWindow(QMainWindow):
         label = QLabel("Drag and drop files/folders or click the button to select files")
         self.list_widget = QListWidget()
         self.select_button = QPushButton("Select Files")
-        self.delete_button = QPushButton("Delete Selected")
 
         # Create a button for opening the next window
         next_button = QPushButton("Next")
         next_button.clicked.connect(self.open_next_window)
 
-        # Create a layout for the label, list widget, and button
+        # Create a button for deleting a selected item
+        delete_button = QPushButton("Delete Selected")
+        delete_button.clicked.connect(self.delete_selected_item)
+
+        # Create a button for clearing the list
+        clear_button = QPushButton("Clear List")
+        clear_button.clicked.connect(self.clear_list)
+
+        # Create a layout for the label, list widget, and buttons
+        layout = QVBoxLayout()
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.select_button)
-        button_layout.addWidget(self.delete_button)
-
-        layout = QVBoxLayout()
+        button_layout.addWidget(delete_button)
+        button_layout.addWidget(clear_button)
         layout.addWidget(label)
         layout.addWidget(self.list_widget)
         layout.addLayout(button_layout)
@@ -178,9 +185,6 @@ class MainWindow(QMainWindow):
 
         # Connect the select button to the select_files function
         self.select_button.clicked.connect(self.select_files)
-
-        # Connect the delete button to the delete_file function
-        self.delete_button.clicked.connect(self.delete_file)
 
         # Enable drag and drop for the list widget
         self.list_widget.setAcceptDrops(True)
@@ -196,11 +200,6 @@ class MainWindow(QMainWindow):
         # Add the selected files to the list widget
         for filename in filenames:
             self.list_widget.addItem(filename)
-
-    def delete_file(self):
-        # Delete the selected item(s) from the list widget
-        for item in self.list_widget.selectedItems():
-            self.list_widget.takeItem(self.list_widget.row(item))
 
     def dragEnterEvent(self, event):
         # Allow drag and drop events to be accepted by the list widget
@@ -236,7 +235,16 @@ class MainWindow(QMainWindow):
         # Open the next window with the selected files
         next_window = NextWindow(selected_files)
         next_window.setWindowModality(Qt.ApplicationModal)
-        next_window.exec_()
+        next_window.show()
+
+    def delete_selected_item(self):
+        # Get the currently selected item in the list widget and delete it
+        current_item = self.list_widget.currentItem()
+        if current_item:
+            self.list_widget.takeItem(self.list_widget.row(current_item))
+
+    def clear_list(self):
+        self.list_widget.clear()
 
 
 def main():

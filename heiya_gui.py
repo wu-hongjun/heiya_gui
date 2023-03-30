@@ -235,7 +235,7 @@ class MainWindow(QMainWindow):
         # Open the next window with the selected files
         next_window = NextWindow(selected_files)
         next_window.setWindowModality(Qt.ApplicationModal)
-        next_window.show()
+        next_window.exec_()
 
     def delete_selected_item(self):
         # Get the currently selected item in the list widget and delete it

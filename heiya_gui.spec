@@ -41,10 +41,11 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=['heiya_gui_logo.png'],
 )
 app = BUNDLE(
     exe,
     name='heiya_gui.app',
-    icon=None,
+    icon='heiya_gui_logo.png',
     bundle_identifier=None,
 )

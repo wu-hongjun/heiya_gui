@@ -1,173 +1,88 @@
 import sys
 import os
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QCheckBox, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QListWidget, QDialog, QGridLayout
+import time
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QCheckBox, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QWidget, 
+                             QListWidget, QProgressBar, QMessageBox, QGridLayout)
 import heiya.to_hei
 
 author = "Hongjun Wu"
-version = "1.1.0"
-updated_date = "20230330"
+version = "1.2.0"
+updated_date = "20230812"
 highlight = "Added a button to clear the list."
 
-class ExtensionWindow(QDialog):
-    def __init__(self):
+class ConversionWorker(QThread):
+    progress_signal = pyqtSignal(int)  # Explicitly define the signal type as int
+    finished_signal = pyqtSignal()
+
+    def __init__(self, selected_files, conversion_function):
         super().__init__()
-        self.setWindowTitle("Select File Extensions")
-        self.setGeometry(200, 200, 400, 200)
-
-        # Create checkboxes for common file extensions
-        self.jpg_checkbox = QCheckBox(".jpg")
-        self.png_checkbox = QCheckBox(".png")
-        self.tif_checkbox = QCheckBox(".tif")
-        self.mp4_checkbox = QCheckBox(".mp4")
-        self.mkv_checkbox = QCheckBox(".mkv")
-
-        # Create a button to start the conversion process
-        self.ok_button = QPushButton("OK")
-        self.ok_button.clicked.connect(self.accept)
-
-        # Create a layout for the checkboxes and button
-        layout = QGridLayout()
-        layout.addWidget(self.jpg_checkbox, 0, 0)
-        layout.addWidget(self.png_checkbox, 0, 1)
-        layout.addWidget(self.tif_checkbox, 1, 0)
-        layout.addWidget(self.mp4_checkbox, 1, 1)
-        layout.addWidget(self.mkv_checkbox, 2, 0)
-        layout.addWidget(self.ok_button, 3, 0, 1, 2)
-
-        # Set the layout for the window
-        self.setLayout(layout)
-
-        # Store the selected extensions
-        self.selected_extensions = []
-
-    def accept(self):
-        # Store the selected extensions and close the window
-        if self.jpg_checkbox.isChecked():
-            self.selected_extensions.append(".jpg")
-        if self.png_checkbox.isChecked():
-            self.selected_extensions.append(".png")
-        if self.tif_checkbox.isChecked():
-            self.selected_extensions.append(".tif")
-        if self.mp4_checkbox.isChecked():
-            self.selected_extensions.append(".mp4")
-        if self.mkv_checkbox.isChecked():
-            self.selected_extensions.append(".mkv")
-        super().accept()
-
-
-class NextWindow(QDialog):
-    def __init__(self, selected_files):
-        super().__init__()
-        self.setWindowTitle("Select Conversion Options")
-        self.setGeometry(200, 200, 400, 200)
-
         self.selected_files = selected_files
+        self.conversion_function = conversion_function
 
-        # Create checkboxes for AVIF, HEIC, and H265
-        self.avif_checkbox = QCheckBox("AVIF")
-        self.heic_checkbox = QCheckBox("HEIC")
-        self.h265_checkbox = QCheckBox("H265")
-
-        # Create a button to start the conversion process
-        self.convert_button = QPushButton("Convert")
-        self.convert_button.clicked.connect(self.convert_files)
-
-        # Create a layout for the checkboxes and button
-        checkbox_layout = QVBoxLayout()
-        checkbox_layout.addWidget(self.avif_checkbox)
-        checkbox_layout.addWidget(self.heic_checkbox)
-        checkbox_layout.addWidget(self.h265_checkbox)
-
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(self.convert_button)
-
-        # Create a vertical layout for the main window
-        main_layout = QVBoxLayout()
-        main_layout.addWidget(QLabel("Conversion Options"))
-        main_layout.addLayout(checkbox_layout)
-        main_layout.addLayout(button_layout)
-
-        # Set the layout for the window
-        self.setLayout(main_layout)
-
-    def convert_files(self):
-        # Check which checkboxes are selected
-        avif_selected = self.avif_checkbox.isChecked()
-        heic_selected = self.heic_checkbox.isChecked()
-        h265_selected = self.h265_checkbox.isChecked()
-
-        # Check if the selected files are a directory or not
-        is_directory = os.path.isdir(self.selected_files[0])
-
-        # Convert the selected files based on the selected checkboxes
-        if is_directory:
-            # Open a new window with checkboxes for file extensions
-            extension_window = ExtensionWindow()
-            extension_window.exec_()
-            selected_extensions = extension_window.selected_extensions
-
-            for extension in selected_extensions:
-                if extension == ".jpg" and avif_selected:
-                    heiya.to_hei.convert_image_in_dir_to_hei(self.selected_files[0], source_format=0, target_format=0)
-                if extension == ".jpg" and heic_selected:
-                    heiya.to_hei.convert_image_in_dir_to_hei(self.selected_files[0], source_format=0, target_format=1)
-                if extension == ".tif" and avif_selected:
-                    heiya.to_hei.convert_image_in_dir_to_hei(self.selected_files[0], source_format=1, target_format=0)
-                if extension == ".tif" and heic_selected:
-                    heiya.to_hei.convert_image_in_dir_to_hei(self.selected_files[0], source_format=1, target_format=1)
-                if extension == ".mp4" and h265_selected:
-                    heiya.to_hei.convert_video_in_dir_to_h265(self.selected_files[0], source_format=0)
-                if extension == ".mkv" and h265_selected:
-                    heiya.to_hei.convert_video_in_dir_to_h265(self.selected_files[0], source_format=1)
-                if extension == ".mov" and h265_selected:
-                    heiya.to_hei.convert_video_in_dir_to_h265(self.selected_files[0], source_format=2)
-        else:
-            for file in self.selected_files:
-                _, extension = os.path.splitext(file)
-
-                if extension == ".jpg" and avif_selected:
-                    heiya.to_hei.convert_image_to_hei(file, target_format=0)
-                if extension == ".jpg" and heic_selected:
-                    heiya.to_hei.convert_image_to_hei(file, target_format=1)
-                if extension == ".tif" and avif_selected:
-                    heiya.to_hei.convert_image_to_hei(file, target_format=0)
-                if extension == ".tif" and heic_selected:
-                    heiya.to_hei.convert_image_to_hei(file, target_format=1)
-                if extension == ".mp4" and h265_selected:
-                    heiya.to_hei.video_to_h265(file)
-                if extension == ".mkv" and h265_selected:
-                    heiya.to_hei.video_to_h265(file)
-                if extension == ".mov" and h265_selected:
-                    heiya.to_hei.video_to_h265(file)
-
-            # Close the window when the conversion is done
-            self.accept()
+    def run(self):
+        total_files = len(self.selected_files)
+        for index, file_path in enumerate(self.selected_files):
+            self.conversion_function(file_path)
+            percent_complete = int((index + 1) / total_files * 100)  # Convert to int before emitting
+            self.progress_signal.emit(percent_complete)
+        self.finished_signal.emit()
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Heiya GUI")
-        self.setGeometry(200, 200, 400, 200)
+        self.setGeometry(200, 200, 500, 350)
 
         # Create a label, list widget, and button for selecting files
         label = QLabel("Drag and drop files/folders or click the button to select files")
         self.list_widget = QListWidget()
         self.select_button = QPushButton("Select Files")
 
-        # Create a button for opening the next window
-        next_button = QPushButton("Next")
-        next_button.clicked.connect(self.open_next_window)
+        # Create checkboxes for file extensions and conversion options
+        self.jpg_checkbox = QCheckBox(".jpg")
+        self.jpg_checkbox.setChecked(True)
+        self.png_checkbox = QCheckBox(".png")
+        self.tif_checkbox = QCheckBox(".tif")
+
+        self.avif_checkbox = QCheckBox("AVIF")
+        self.avif_checkbox.setChecked(True)
+        self.heic_checkbox = QCheckBox("HEIC")
+        self.h265_checkbox = QCheckBox("H265")
+
+        # Create a grid layout for the checkboxes
+        grid_layout = QGridLayout()
+        grid_layout.addWidget(QLabel("From"), 0, 0)
+        grid_layout.addWidget(QLabel("To"), 0, 1)
+        grid_layout.addWidget(self.jpg_checkbox, 1, 0)
+        grid_layout.addWidget(self.png_checkbox, 2, 0)
+        grid_layout.addWidget(self.tif_checkbox, 3, 0)
+        grid_layout.addWidget(self.avif_checkbox, 1, 1)
+        grid_layout.addWidget(self.heic_checkbox, 2, 1)
+        grid_layout.addWidget(self.h265_checkbox, 3, 1)
+
+        # Create a progress bar
+        self.progress_bar = QProgressBar(self)
+        self.progress_bar.setMaximum(100)
+        self.progress_bar.setValue(0)
+
+        # Create a button to start the conversion process
+        self.convert_button = QPushButton("Convert")
+        self.convert_button.clicked.connect(self.convert_files)
+        self.convert_button.clicked.connect(self.reset_progress_bar)
 
         # Create a button for deleting a selected item
         delete_button = QPushButton("Delete Selected")
         delete_button.clicked.connect(self.delete_selected_item)
+        delete_button.clicked.connect(self.reset_progress_bar)
 
         # Create a button for clearing the list
         clear_button = QPushButton("Clear List")
         clear_button.clicked.connect(self.clear_list)
+        clear_button.clicked.connect(self.reset_progress_bar)
 
-        # Create a layout for the label, list widget, and buttons
+
+        # Create a layout for the label, list widget, checkboxes, and buttons
         layout = QVBoxLayout()
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.select_button)
@@ -176,7 +91,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(label)
         layout.addWidget(self.list_widget)
         layout.addLayout(button_layout)
-        layout.addWidget(next_button)
+        layout.addLayout(grid_layout)  # Add the grid layout to the main layout
+
+        
+        layout.addWidget(self.progress_bar)
+        layout.addWidget(self.convert_button)
 
         # Create a central widget and set the main layout
         central_widget = QWidget()
@@ -222,21 +141,6 @@ class MainWindow(QMainWindow):
             if os.path.isfile(file_path) or os.path.isdir(file_path):
                 self.list_widget.addItem(file_path)
 
-    def open_next_window(self):
-        # Get the selected files from the list widget
-        selected_files = []
-        for index in range(self.list_widget.count()):
-            selected_files.append(self.list_widget.item(index).text())
-
-        # Check if any files have been selected
-        if len(selected_files) == 0:
-            return
-
-        # Open the next window with the selected files
-        next_window = NextWindow(selected_files)
-        next_window.setWindowModality(Qt.ApplicationModal)
-        next_window.exec_()
-
     def delete_selected_item(self):
         # Get the currently selected item in the list widget and delete it
         current_item = self.list_widget.currentItem()
@@ -246,6 +150,71 @@ class MainWindow(QMainWindow):
     def clear_list(self):
         self.list_widget.clear()
 
+    def convert_files(self):
+        # Check which checkboxes are selected
+        avif_selected = self.avif_checkbox.isChecked()
+        heic_selected = self.heic_checkbox.isChecked()
+        h265_selected = self.h265_checkbox.isChecked()
+
+        jpg_selected = self.jpg_checkbox.isChecked()
+        png_selected = self.png_checkbox.isChecked()
+        tif_selected = self.tif_checkbox.isChecked()
+
+        # Define the conversion function
+        def conversion_function(file_path):
+            # Check if the selected files are a directory or not
+            is_directory = os.path.isdir(file_path)
+
+            # Convert the selected files based on the selected checkboxes
+            if is_directory:
+                if jpg_selected and avif_selected:
+                    heiya.to_hei.convert_image_in_dir_to_hei(file_path, source_format=0, target_format=0)
+                if jpg_selected and heic_selected:
+                    heiya.to_hei.convert_image_in_dir_to_hei(file_path, source_format=0, target_format=1)
+                if png_selected and avif_selected:
+                    heiya.to_hei.convert_image_in_dir_to_hei(file_path, source_format=2, target_format=0)
+                if png_selected and heic_selected:
+                    heiya.to_hei.convert_image_in_dir_to_hei(file_path, source_format=2, target_format=1)
+                if tif_selected and avif_selected:
+                    heiya.to_hei.convert_image_in_dir_to_hei(file_path, source_format=1, target_format=0)
+                if tif_selected and heic_selected:
+                    heiya.to_hei.convert_image_in_dir_to_hei(file_path, source_format=1, target_format=1)
+
+            else:
+                _, extension = os.path.splitext(file_path)
+
+                if (jpg_selected or png_selected or tif_selected) and avif_selected:
+                    heiya.to_hei.convert_image_to_hei(file_path, target_format=0)
+                if (jpg_selected or png_selected or tif_selected) and heic_selected:
+                    heiya.to_hei.convert_image_to_hei(file_path, target_format=1)
+
+        # Get the selected files from the list widget
+        selected_files = [self.list_widget.item(index).text() for index in range(self.list_widget.count())]
+
+        # Check if any files have been selected
+        if not selected_files:
+            return
+
+        # Create a worker thread for the conversion
+        self.worker = ConversionWorker(selected_files, conversion_function)
+        self.worker.progress_signal.connect(self.update_progress_bar)
+        self.worker.finished_signal.connect(self.conversion_finished)
+        self.worker.start()
+
+
+    def update_progress_bar(self, value):
+        self.progress_bar.setValue(value)
+
+    def reset_progress_bar(self):
+        self.progress_bar.setValue(0)
+
+    def conversion_finished(self):
+        # Display a message box when the conversion is finished
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Information)
+        msg.setText("Conversion completed!")
+        msg.setWindowTitle("Info")
+        msg.exec_()
 
 def main():
     app = QApplication(sys.argv)
@@ -253,7 +222,5 @@ def main():
     window.show()
     sys.exit(app.exec_())
 
-
 if __name__ == "__main__":
     main()
-
